@@ -2,6 +2,8 @@
 import type { Assignment, Branch, Order } from './types.ts';
 import { distanceKm } from './geo.ts';
 
+export const MAX_GEO_KM = 42;
+
 export function assignBranch(order: Order, branches: Branch[]): Assignment {
   const own = branches.filter((b) => b.storeId === order.storeId && b.active);
 
@@ -27,23 +29,20 @@ export function assignBranch(order: Order, branches: Branch[]): Assignment {
     return { orderId: order.id, branchId: inCity[0].id, rule: 'city' };
   }
 
-  const nearest = findNearest(order, own);
-  if (nearest) return { orderId: order.id, branchId: nearest.id, rule: 'geo' };
+  const nearest = findNearest(order, inCity.length > 1 ? inCity : own);
+  if (!nearest) return { orderId: order.id, branchId: null, rule: 'unassigned' };
+  if (nearest.km > MAX_GEO_KM) return { orderId: order.id, branchId: null, rule: 'too_far' };
 
-  return { orderId: order.id, branchId: null, rule: 'unassigned' };
+  return { orderId: order.id, branchId: nearest.branch.id, rule: 'geo' };
 }
 
-function findNearest(order: Order, branches: Branch[]): Branch | null {
+function findNearest(order: Order, branches: Branch[]): { branch: Branch; km: number } | null {
   if (order.lat === null || order.lon === null) return null;
 
-  let best: Branch | null = null;
-  let bestDist = Infinity;
+  let best: { branch: Branch; km: number } | null = null;
   for (const b of branches) {
-    const d = distanceKm(order.lat, order.lon, b.lat, b.lon);
-    if (d < bestDist) {
-      best = b;
-      bestDist = d;
-    }
+    const km = distanceKm(order.lat, order.lon, b.lat, b.lon);
+    if (!best || km < best.km) best = { branch: b, km };
   }
   return best;
 }
