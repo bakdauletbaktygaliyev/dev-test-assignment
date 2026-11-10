@@ -1,7 +1,8 @@
+// @rev kc-31
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { getSlots } from '../src/slots.ts';
-import { overlaps, toMinutes } from '../src/time.ts';
+import { almatyDate, almatyInstant, minutesFromDayStart, overlaps, toMinutes } from '../src/time.ts';
 import type { Master, Service } from '../src/types.ts';
 
 const day = { from: '10:00', to: '13:00', breaks: [] };
@@ -37,3 +38,15 @@ test('getSlots: выходной', () => {
 test.todo('getSlots: слот не пересекает перерыв');
 test.todo('getSlots: занятое время не выдаётся, отменённые записи не мешают');
 test.todo('getSlots: прошедшее время не выдаётся');
+
+test('almatyInstant: 10:00 по Алматы — это 05:00 UTC', () => {
+  assert.equal(new Date(almatyInstant('2030-11-18', '10:00')).toISOString(), '2030-11-18T05:00:00.000Z');
+});
+
+test('minutesFromDayStart: запись в 05:00 UTC — 600 минут от полуночи по Алматы', () => {
+  assert.equal(minutesFromDayStart('2030-11-18', '2030-11-18T05:00:00.000Z'), 600);
+});
+
+test('almatyDate: 19:30 UTC — уже следующие сутки', () => {
+  assert.equal(almatyDate('2030-11-18T19:30:00Z'), '2030-11-19');
+});

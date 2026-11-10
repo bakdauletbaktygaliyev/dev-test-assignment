@@ -27,3 +27,17 @@ export type Range = { start: number; end: number };
 export function overlaps(a: Range, b: Range): boolean {
   return a.start < b.end && b.start < a.end;
 }
+
+export function almatyInstant(date: string, hhmm: string): number {
+  return Date.parse(`${date}T${hhmm}:00${TZ_OFFSET}`);
+}
+
+export function minutesFromDayStart(date: string, iso: string): number {
+  return (Date.parse(iso) - almatyInstant(date, '00:00')) / 60_000;
+}
+
+export function almatyDate(iso: string): string {
+  return new Date(Date.parse(iso) + 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+
