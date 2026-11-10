@@ -64,7 +64,6 @@ test('geo: без координат заказ не распределяетс�
   assert.equal(res.rule, 'unassigned');
 });
 
-test.todo('лимит: заполненный филиал пропускается');
 
 const second = branch({ id: 'b-ala-2', city: 'Алматы', lat: 43.265, lon: 76.835 });
 
@@ -104,3 +103,46 @@ test('geo: филиал дальше 42 км не подходит', () => {
   assert.deepEqual(res, { orderId: 'o-1', branchId: null, rule: 'too_far' });
 });
 
+const full = (...ids: string[]) => (b: Branch) => ids.includes(b.id);
+const near = branch({ id: 'b-near', city: 'Конаев', lat: 43.3, lon: 76.95 });
+
+test('лимит: заполненный филиал пропускается', () => {
+  const res = assignBranch(order({}), [almaty, near], full('b-ala'));
+  assert.deepEqual(res, { orderId: 'o-1', branchId: 'b-near', rule: 'geo' });
+});
+
+test('лимит: manual не проверяет лимит', () => {
+  const res = assignBranch(order({ manualBranchId: 'b-ala' }), [almaty, astana], full('b-ala'));
+  assert.deepEqual(res, { orderId: 'o-1', branchId: 'b-ala', rule: 'manual' });
+});
+
+test('лимит: single заполнен, других филиалов нет', () => {
+  const res = assignBranch(order({}), [almaty], full('b-ala'));
+  assert.deepEqual(res, { orderId: 'o-1', branchId: null, rule: 'unassigned' });
+});
+
+test('лимит: pickup_point заполнен, заказ уходит в ближайший', () => {
+  const served = { ...almaty, pickupPointIds: ['pp-1'] };
+  const res = assignBranch(order({ pickupPointId: 'pp-1' }), [served, near], full('b-ala'));
+  assert.deepEqual(res, { orderId: 'o-1', branchId: 'b-near', rule: 'geo' });
+});
+
+test('лимит: geo заполнен, заказ уходит в следующий ближайший', () => {
+  const res = assignBranch(order({}), [almaty, second], full('b-ala'));
+  assert.deepEqual(res, { orderId: 'o-1', branchId: 'b-ala-2', rule: 'geo' });
+});
+
+test('лимит: без координат запасной филиал не найти', () => {
+  const res = assignBranch(order({ lat: null, lon: null }), [almaty, astana], full('b-ala'));
+  assert.deepEqual(res, { orderId: 'o-1', branchId: null, rule: 'unassigned' });
+});
+
+test('лимит: незаполненный филиал дальше 42 км', () => {
+  const res = assignBranch(order({}), [almaty, astana], full('b-ala'));
+  assert.deepEqual(res, { orderId: 'o-1', branchId: null, rule: 'too_far' });
+});
+
+test('лимит: все филиалы заполнены', () => {
+  const res = assignBranch(order({}), [almaty, astana], full('b-ala', 'b-ast'));
+  assert.deepEqual(res, { orderId: 'o-1', branchId: null, rule: 'unassigned' });
+});
