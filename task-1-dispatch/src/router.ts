@@ -22,27 +22,27 @@ export function assignBranch(
       : { orderId: order.id, branchId: branch.id, rule };
 
   if (own.length === 1) {
-    return assignOrFallBack(own[0], 'single');
+    return assignOrFallback(own[0], 'single');
   }
 
   const { pickupPointId } = order;
   if (pickupPointId) {
     const pickup = own.find((b) => b.pickupPointIds.includes(pickupPointId));
     if (pickup) {
-      return assignOrFallBack(pickup, 'pickup_point');
+      return assignOrFallback(pickup, 'pickup_point');
     }
   }
 
   const inCity = own.filter((b) => b.city === order.city);
   if (inCity.length === 1) {
-    return assignOrFallBack(inCity[0], 'city');
+    return assignOrFallback(inCity[0], 'city');
   }
 
   const nearest = findNearest(order, inCity.length > 1 ? inCity : own);
   if (!nearest) return { orderId: order.id, branchId: null, rule: 'unassigned' };
   if (nearest.km > MAX_GEO_KM) return { orderId: order.id, branchId: null, rule: 'too_far' };
 
-  return assignOrFallBack(nearest.branch, 'geo');
+  return assignOrFallback(nearest.branch, 'geo');
 }
 
 function nearestAssignment(order: Order, candidates: Branch[]): Assignment {
